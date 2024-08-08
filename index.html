@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[오전to김] 소개 페이지</title>
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .comment-section {
+            margin-top: 50px;
+        }
+
+        .comment-card {
+            border: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .comment-form .btn {
+            background-color: #007bff;
+            border: none;
+        }
+
+        .comment-form .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .delete-btn {
+            color: #dc3545;
+            cursor: pointer;
+        }
+
+        .comment-meta {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"></script>
+    <!-- <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/js/bootstrap.min.js"></script> -->
+    <script type="module">
+
+        // Firebase SDK 라이브러리 가져오기
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getDocs, doc, getDoc, deleteDoc, query, where, and, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        // team06
+        const firebaseConfig = { // team06
+            apiKey: "AIzaSyDpe_9Kox1KJx_J2GP3s_FHgir8dLVcfuE",
+            authDomain: "sparta-morning2kim.firebaseapp.com",
+            projectId: "sparta-morning2kim",
+            storageBucket: "sparta-morning2kim.appspot.com",
+            messagingSenderId: "63603004697",
+            appId: "1:63603004697:web:4efb0b6b5fde5c34912188",
+            measurementId: "G-DN6TGVGTFF"
+        };
+
+        // self 
+        // const firebaseConfig = {
+        //     apiKey: "AIzaSyASZbQnjHkcQRnvVXmJl7ZvO48luGy49jQ",
+        //     authDomain: "sparta-72447.firebaseapp.com",
+        //     projectId: "sparta-72447",
+        //     storageBucket: "sparta-72447.appspot.com",
+        //     messagingSenderId: "335304452759",
+        //     appId: "1:335304452759:web:07f5b79d7aa01cda6997d2",
+        //     measurementId: "G-RJJMXD8V80"
+        // };
+
+
+        // Firebase 인스턴스 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+
+        document.getElementById('commentForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            let name = document.getElementById('name').value;
+            let password = document.getElementById('password').value;
+            let comment = document.getElementById('comment').value;
+            let timestamp = new Date().toLocaleString();
+
+            let commentCard = document.createElement('div');
+            commentCard.className = 'card p-3 my-3 comment-card';
+            commentCard.dataset.password = password;
+            commentCard.innerHTML = `
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <h4 class="card-title">${name}</h4>
+              <span class="delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal">&times;</span>
+            </div>
+            <p class="card-text"><pre>${comment}</pre></p>
+            <p class="comment-meta">등록일시: <span class="timestamp">${timestamp}</span></p>
+          </div>
+        `;
+
+            document.getElementById('commentsList').appendChild(commentCard);
+
+
+            /** 방명록 등록 */
+            let doc = {
+                'name': name,
+                'password': password,
+                'comment': comment,
+                'created_dtm': new Date().toLocaleString()
+            };
+            await addDoc(collection(db, "guest_book"), doc);
+
+            alert('정상적으로 등록되었습니다.');
+            window.location.reload(); // 새로고침
+
+
+            // Clear the form
+            document.getElementById('commentForm').reset();
+        });
+
+        // Delete button functionality
+        let commentToDelete = null;
+
+        $(document).on('click', '.delete-btn', function () {
+            commentToDelete = $(this).closest('.comment-card');
+        });
+
+        document.getElementById('confirmDelete').addEventListener('click', async function () {
+            let deletePassword = document.getElementById('deletePassword').value;
+
+            if (commentToDelete && String(commentToDelete.data('password')) === String(deletePassword)) {
+                commentToDelete.remove();
+
+                $('#deleteModal').modal('hide');
+                const docId = String(commentToDelete.data('docId'));
+                const docSnap = await getDoc(doc(db, "guest_book", docId));
+                if (docSnap.exists()) {
+                    await deleteDoc(doc(db, "guest_book", docId));
+                    alert('정상적으로 삭제되었습니다.');
+                    window.location.reload(); // 새로고침
+                } else {
+                    alert('이미 삭제된 데이터 입니다.');
+                }
+            } else {
+                alert('잘못된 비밀번호 입니다.');
+            }
+        });
+
+        $('#deleteModal').on('hidden.bs.modal', function () {
+            document.getElementById('deletePassword').value = '';
+        });
+
+
+
+        /** 
+         * 방명록 데이터 가져오기 
+         */
+        let guest_book = await getDocs(collection(db, "guest_book"));
+
+        guest_book.forEach((doc) => {
+            let row = doc.data();
+
+            let name = row['name'];
+            let password = row['password'];
+            let comment = row['comment'];
+            let timestamp = row['created_dtm'];
+            let docId = doc.id;
+
+
+            let commentCard = document.createElement('div');
+            commentCard.className = 'card p-3 my-3 comment-card';
+            commentCard.dataset.password = password;
+            commentCard.dataset.docId = doc.id;
+            commentCard.innerHTML = `
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                    <h4 class="card-title">${name}</h4>
+                    <span class="delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal">&times;</span>
+                    </div>
+                    <p class="card-text"><pre>${comment}</pre></p>
+                    <p class="comment-meta">등록일시: <span class="timestamp">${timestamp}</span></p>
+                </div>
+            `;
+
+            document.getElementById('commentsList').appendChild(commentCard);
+
+        });
+
+
+        /** 멤버 등록 */
+        document.getElementById('memberInfoForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            let memberName = $('#memberName').val();
+            let memberImg = $('#memberImg').val();
+            let memberGoal = $('#memberGoal').val();
+            let memberResolution = $('#memberResolution').val();
+
+            let doc = {
+                'memberName': memberName,
+                'memberImg': memberImg,
+                'memberGoal': memberGoal,
+                'memberResolution': memberResolution,
+                'created_dtm': new Date().toLocaleString()
+            };
+
+            await addDoc(collection(db, "member_info"), doc);
+
+            alert('정상적으로 등록되었습니다.');
+            window.location.reload(); // 새로고침
+        });
+
+
+        /** 
+         * 팀원 데이터 가져오기 
+         */
+        let member_list = await getDocs(collection(db, "member_info"));
+
+        member_list.forEach((doc) => {
+            let row = doc.data();
+
+            let memberName = row['memberName'];
+            let memberImg = row['memberImg'];
+            let memberGoal = row['memberGoal'];
+            let memberResolution = row['memberResolution'];
+            let timestamp = row['created_dtm'];
+            let docId = doc.id;
+
+            let memberCard = document.createElement('div');
+            // memberCard.className = 'card p-3 my-3 comment-card';
+            memberCard.dataset.docId = doc.id;
+            memberCard.innerHTML = `
+                <div class="col">
+                    <div class="card">
+                        <p class="text-center">
+                            <img src="${memberImg}"
+                                class="card-img-top" alt="..." style="height: 300px; width: 300px; ">
+                        </p>
+                        <div class="card-body">
+                            <h5 class="card-title text-center">${memberName}</h5>
+                            <p class="card-text">- 목표 : ${memberGoal}</p>
+                            <p class="card-text">- 각오 : ${memberResolution}</p>
+                            <p class="text-center">
+                                <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal"
+                                    data-bs-target="#staticBackdrop">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-dice-4" viewBox="0 0 16 16">
+                                        <path
+                                            d="M13 1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2zM3 0a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V3a3 3 0 0 0-3-3z">
+                                        </path>
+                                        <path
+                                            d="M5.5 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m8 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m-8 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0">
+                                        </path>
+                                    </svg>
+                                    취미소개
+                                </button>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                `;
+
+            document.getElementById('member_list').appendChild(memberCard);
+
+        });
+
+
+        /** 
+         * 팀 소개 데이터 가져오기 
+         */
+        const q = query(collection(db, "team_info"), and(where("useYn", "==", "Y"), where("teamName", "==", "오전to김")));
+
+        let team_list = await getDocs(q);
+
+        team_list.forEach((doc) => {
+            let row = doc.data();
+            console.log("team => ", row);
+            console.log("team => ", row);
+            console.log("team => ", doc); // row 길이 체크 하던가 0인덱스만 가져오던가 해야할듯?            
+            $("#teamIntro").html("<pre>"+row["teamIntro"]+"</pre>");
+            $("#teamGoal").html("<pre>"+row["teamGoal"]+"</pre>");
+            $("#teamResolution").html("<pre>"+row["teamResolution"]+"</pre>");
+
+            $("#modalTeamId").val(doc.id);
+            $("#modalTeamName").val(row["teamName"]);
+            $("#modalTeamIntro").val(row["teamIntro"]);
+            $("#modalTeamGoal").val(row["teamGoal"]);
+            $("#modalTeamResolution").val(row["teamResolution"]);
+            
+        });
+
+        $('#teamIntroBtn').click(async function(){
+            
+            const ref = doc(db, "team_info", $("#modalTeamId").val());
+
+            await updateDoc(ref, {
+                teamIntro: $("#modalTeamIntro").val(),
+                teamGoal: $("#modalTeamGoal").val(),
+                teamResolution: $("#modalTeamResolution").val(),
+            });
+
+            alert('정상적으로 수정되었습니다.');
+            window.location.reload(); // 새로고침
+        });
+
+
+    </script>
+
+
+</head>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"></script>
+
+<body>
+
+
+    <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">오전to김</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText"
+                aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarText">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" aria-current="page" href="#team_intro">팀 소개</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#member_intro">팀원 소개</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#guest_book">방명록</a>
+                    </li>
+                </ul>
+
+                <div>
+                    <span class="navbar-text" style="margin-right: 10px;">
+                        <a id="team_tag" data-bs-toggle="modal" data-bs-target="#teamModal">팀</a>
+                    </span>
+                    <span class="navbar-text" style="margin-right: 10px;">
+                        <a id="team_tag" data-bs-toggle="modal" data-bs-target="#memberModal">팀원</a>
+                    </span>
+                </div>
+
+                <span class="navbar-text">
+                    미니 프로젝트 6조
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 팀 소개 style="height: 800px; background-color: green;" -->
+    <div id="team_intro" style="border-top: 200px; ">
+        <div class="card text-center">
+            <div class="card-header">
+                🎮 미니프로젝트 6조 🎮
+            </div>
+            <div class="card-body">
+                <h1 class="card-title">오전to김</h1>
+                <p class="card-text">우리 팀을 소개합니다.</p>
+                <a href="https://github.com/team06-morning2kim" target="_blank" class="btn btn-primary"> <svg
+                        xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                        class="bi bi-github" viewBox="0 0 16 16">
+                        <path
+                            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8" />
+                    </svg> Team Github</a>
+
+            </div>
+            <div class="card-footer text-muted">
+                2024.08.05 ~
+            </div>
+        </div>
+
+        <div style="margin: 20px;">
+            <div class="accordion" id="accordionPanelsStayOpenExample">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="true"
+                            aria-controls="panelsStayOpen-collapseOne">
+                            팀 소개
+                        </button>
+                    </h2>
+                    <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show">
+                        <div class="accordion-body" id="teamIntro">
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false"
+                            aria-controls="panelsStayOpen-collapseTwo">
+                            팀 목표
+                        </button>
+                    </h2>
+                    <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse">
+                        <div class="accordion-body" id="teamGoal">
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#panelsStayOpen-collapseThree" aria-expanded="false"
+                            aria-controls="panelsStayOpen-collapseThree">
+                            팀 각오
+                        </button>
+                    </h2>
+                    <div id="panelsStayOpen-collapseThree" class="accordion-collapse collapse">
+                        <div class="accordion-body" id="teamResolution">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- 팀원 소개 style="height: 800px; background-color: blue;" -->
+    <div id="member_intro" style="margin: 20px;">
+        <div id="member_list" class="row row-cols-1 row-cols-md-2 g-4">
+        </div>
+    </div>
+
+    <!-- 방명록 -->
+    <div id="guest_book" style="margin: 20px; ">
+        <div class="container">
+            <div class="comment-section">
+                <h2 class="text-center my-5">방명록</h2>
+                <div class="card p-5 comment-card">
+                    <div class="card-body">
+                        <h5 class="card-title">저희 팀을 응원해주세요!</h5>
+                        <form id="commentForm" class="comment-form">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="name" class="form-label">이름</label>
+                                    <input type="text" class="form-control" id="name" required>
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    <label for="password" class="form-label">비밀번호</label>
+                                    <input type="password" class="form-control" id="password" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="comment" class="form-label">내용</label>
+                                <textarea class="form-control" id="comment" rows="3" required></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button id="gb_save" type="submit" class="btn btn-primary">등록</button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+                <div id="commentsList" class="mt-4">
+
+                </div>
+            </div>
+        </div>
+
+        <!-- 방명록 삭제 모달 팝업 -->
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteModalLabel">비밀번호를 입력하세요.</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="password" class="form-control" id="deletePassword" placeholder="Password" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                        <button type="button" class="btn btn-danger" id="confirmDelete">삭제</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 취미 추천 모달 팝업-->
+        <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+            aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">취미 소개</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="infoForm">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">취미</label>
+                                <input type="text" class="form-control" id="hobbyName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="image" class="form-label">취미 이미지</label>
+                                <input type="url" class="form-control" id="image" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="resolution" class="form-label">추천하는 이유</label>
+                                <textarea class="form-control" id="resolution" rows="3" required></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">저장</button>
+                            </div>
+                        </form>
+                    </div>
+                    <!-- <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    </div> -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 팀원 정보 모달 팝업-->
+        <div class="modal fade" id="memberModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+            aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">멤버 등록</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="memberInfoForm">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">이름</label>
+                                <input type="text" class="form-control" id="memberName" placeholder="이름을 입력하세요"
+                                    required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="image" class="form-label">이미지 URL</label>
+                                <input type="url" class="form-control" id="memberImg" placeholder="이미지 URL을 입력하세요"
+                                    required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="goal" class="form-label">각오</label>
+                                <input type="text" class="form-control" id="memberGoal" placeholder="각오를 입력하세요"
+                                    required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="resolution" class="form-label">목표</label>
+                                <textarea class="form-control" id="memberResolution" rows="3" placeholder="목표를 입력하세요"
+                                    required></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">저장</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 팀 정보 모달 팝업-->
+        <div class="modal fade" id="teamModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+            aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">팀 정보 수정</h5>
+                        <input type="hidden" id="modalTeamId">
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- <form id="memberInfoForm"> -->
+                            <div class="mb-3">
+                                <label for="name" class="form-label">팀 이름</label>
+                                <input type="text" class="form-control" id="modalTeamName" placeholder="이름을 입력하세요" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label for="resolution" class="form-label">팀 소개</label>
+                                <textarea class="form-control" id="modalTeamIntro" rows="3" placeholder="소개를 입력하세요"
+                                    required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="resolution" class="form-label">팀 목표</label>
+                                <textarea class="form-control" id="modalTeamGoal" rows="3" placeholder="목표를 입력하세요"
+                                    required></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="resolution" class="form-label">팀 각오</label>
+                                <textarea class="form-control" id="modalTeamResolution" rows="3" placeholder="각오를 입력하세요"
+                                    required></textarea>
+                            </div>
+
+                            <div class="text-end">
+                                <button id="teamIntroBtn" class="btn btn-primary">저장</button>
+                            </div>
+                        <!-- </form> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>
